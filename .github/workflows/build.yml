@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -q RawDriveFixer.zip
+      - run: unzip -q RawDriveFixer(1).zip
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -21,4 +21,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: RawDriveFixer-apk
-          path: RawDriveFixer/app/build/outputs/apk/debug/app-debug.apk
+          path: RawDriveFixer(1)/app/build/outputs/apk/debug/app-debug.apk
