@@ -1,0 +1,66 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Unpack the newest project zip
+        run: |
+          best=""
+          bt=0
+          for f in RawDriveFixer*.zip; do
+            [ -e "$f" ] || continue
+            t=$(git log -1 --format=%ct -- "$f")
+            if [ "${t:-0}" -gt "$bt" ]; then
+              bt=$t
+              best="$f"
+            fi
+          done
+          if [ -z "$best" ]; then
+            echo "No RawDriveFixer zip found in the repo"
+            exit 1
+          fi
+          echo "Using: $best"
+          unzip -q -o "$best"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          cache-disabled: true
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon
+        working-directory: RawDriveFixer
+
+      - name: Name the APK
+        run: cp RawDriveFixer/app/build/outputs/apk/debug/app-debug.apk RawDriveFixer-v${{ github.run_number }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RawDriveFixer-apk
+          path: RawDriveFixer-v${{ github.run_number }}.apk
+
+      - name: Publish as a Release (direct APK download)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "build-${{ github.run_number }}" "RawDriveFixer-v${{ github.run_number }}.apk" \
+            --title "RAW Drive Fixer build ${{ github.run_number }}" \
+            --notes "Download the .apk file below and install it on your phone."
